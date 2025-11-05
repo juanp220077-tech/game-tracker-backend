@@ -9,18 +9,18 @@ const GameSchema = new mongoose.Schema({
     },
     coverUrl: {
         type: String,
-        default: 'placeholder_url_para_portada_generica.jpg' // URL de la imagen de portada
+        default: 'placeholder_url_para_portada_generica.jpg'
     },
     status: {
         type: String,
-        enum: ['Pendiente', 'Jugando', 'Completado'], // Estado del juego
+        enum: ['Pendiente', 'Jugando', 'Completado'],
         default: 'Pendiente'
     },
     rating: {
         type: Number,
         min: 0,
         max: 5,
-        default: 0 // Puntuación con estrellas (0 a 5)
+        default: 0
     },
     hoursPlayed: {
         type: Number,
@@ -30,13 +30,22 @@ const GameSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    // **********************************************
+    // ********* CAMPO AGREGADO (Genre) ************
+    // **********************************************
+    genre: {
+        type: String,
+        trim: true,
+        default: 'N/A' // Valor por defecto si no se envía
+    },
+    
     // Referencia a las reseñas (opcional, pero buena práctica)
     reviews: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Review'
     }]
 }, {
-    timestamps: true // Añade campos createdAt y updatedAt automáticamente
+    timestamps: true
 });
 
 module.exports = mongoose.model('Game', GameSchema);

@@ -1,71 +1,103 @@
-const Game = require('../models/Game');
+// backend/controllers/gameController.js
 
-// 1. Obtener todos los juegos (Read - All)
+const Game = require('../models/Game'); // Asume que tienes un modelo Game creado
+
+// **********************************************
+// ********* 1. LEER TODOS (GET /api/games) ********
+// **********************************************
 exports.getAllGames = async (req, res) => {
+    // ESTA FUNCIÓN RESUELVE EL ERROR SI SE USABA EN LA LÍNEA 8 DE gameRoutes.js
     try {
-        const games = await Game.find().sort({ title: 1 }); // Ordenar alfabéticamente
+        // Lógica para aplicar filtros (search, status, sort)
+        const { search, status, sort } = req.query;
+        let filter = {};
+        let sortCriteria = {};
+
+        // Filtro de búsqueda por título
+        if (search) {
+            filter.title = { $regex: search, $options: 'i' }; 
+        }
+
+        // Filtro por estado
+        if (status) {
+            filter.status = status;
+        }
+
+        // Criterio de ordenamiento
+        if (sort) {
+            // Ejemplo: Ordenar por 'title' o '-hoursPlayed' (descendente)
+            if (sort === 'rating') sortCriteria.rating = -1;
+            else if (sort === 'hoursPlayed') sortCriteria.hoursPlayed = -1;
+            else sortCriteria.title = 1;
+        }
+
+        const games = await Game.find(filter).sort(sortCriteria);
         res.status(200).json({ success: true, data: games });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error al obtener los juegos', error: error.message });
+        res.status(500).json({ success: false, error: 'Error al obtener los juegos: ' + error.message });
     }
 };
 
-// 2. Crear un nuevo juego (Create)
+// **********************************************
+// ********* 2. CREAR (POST /api/games) *********
+// **********************************************
 exports.createGame = async (req, res) => {
+    // ESTA FUNCIÓN ES LA MÁS PROBABLE CAUSA DEL ERROR EN gameRoutes.js (Línea 11)
     try {
-        const newGame = await Game.create(req.body);
-        res.status(201).json({ success: true, data: newGame });
+        const newGame = new Game(req.body);
+        const savedGame = await newGame.save();
+        res.status(201).json({ success: true, data: savedGame });
     } catch (error) {
-        // Manejar error de validación de Mongoose
-        res.status(400).json({ success: false, message: 'Datos incompletos o inválidos', error: error.message });
+        // 400 Bad Request si el modelo falla las validaciones
+        res.status(400).json({ success: false, error: 'Error al crear el juego: ' + error.message });
     }
 };
 
-// 3. Obtener un juego por ID (Read - One)
+// **********************************************
+// ********* 3. LEER POR ID (GET /api/games/:id) *********
+// **********************************************
 exports.getGameById = async (req, res) => {
     try {
         const game = await Game.findById(req.params.id);
         if (!game) {
-            return res.status(404).json({ success: false, message: 'Juego no encontrado' });
+            return res.status(404).json({ success: false, error: 'Juego no encontrado' });
         }
         res.status(200).json({ success: true, data: game });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error en el servidor', error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
-// 4. Actualizar un juego por ID (Update)
+// **********************************************
+// ********* 4. ACTUALIZAR (PUT /api/games/:id) *********
+// **********************************************
 exports.updateGame = async (req, res) => {
     try {
-        const updatedGame = await Game.findByIdAndUpdate(req.params.id, req.body, {
-            new: true, // Devuelve el documento actualizado
-            runValidators: true // Ejecuta las validaciones de Mongoose
+        const game = await Game.findByIdAndUpdate(req.params.id, req.body, {
+            new: true, // Devuelve el documento modificado
+            runValidators: true // Aplica las validaciones del esquema
         });
-
-        if (!updatedGame) {
-            return res.status(404).json({ success: false, message: 'Juego no encontrado para actualizar' });
+        if (!game) {
+            return res.status(404).json({ success: false, error: 'Juego no encontrado para actualizar' });
         }
-
-        res.status(200).json({ success: true, data: updatedGame });
+        res.status(200).json({ success: true, data: game });
     } catch (error) {
-        res.status(400).json({ success: false, message: 'Error al actualizar el juego', error: error.message });
+        res.status(400).json({ success: false, error: 'Error al actualizar: ' + error.message });
     }
 };
 
-// 5. Eliminar un juego por ID (Delete)
+// **********************************************
+// ********* 5. ELIMINAR (DELETE /api/games/:id) *********
+// **********************************************
 exports.deleteGame = async (req, res) => {
     try {
         const deletedGame = await Game.findByIdAndDelete(req.params.id);
-
         if (!deletedGame) {
-            return res.status(404).json({ success: false, message: 'Juego no encontrado para eliminar' });
+            return res.status(404).json({ success: false, error: 'Juego no encontrado para eliminar' });
         }
-
-        // Lógica adicional: Eliminar todas las reseñas asociadas a este juego (buena práctica)
-        // await Review.deleteMany({ game: req.params.id }); 
-
-        res.status(200).json({ success: true, message: 'Juego eliminado con éxito', data: {} });
+        // 204 No Content es estándar para DELETE exitoso
+        res.status(204).json({ success: true, data: {} }); 
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Error al eliminar el juego', error: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
